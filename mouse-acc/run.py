@@ -16,7 +16,7 @@ class COLOR:
 
 
 SPEED_DESKTOP = 0.7
-SPEED_TRACKPAD = -0.9
+SPEED_TRACKPAD = -0.7
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
