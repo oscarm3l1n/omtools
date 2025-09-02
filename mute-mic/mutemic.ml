@@ -65,7 +65,7 @@ DESCRIPTION
         Unmute the microphone.
 
     --no-unmute
-        Unmute the microphone. Same as running with no arguments.
+        Mute the microphone. Same as running with no arguments.
 
     -h, --help
         Display this help message.
