@@ -13,53 +13,71 @@
      UBUNTU_CODENAME=noble
      LOGO=ubuntu-logo *)
 
-type msg = Unmuted | Muted
+type state = Muted | Unmuted
 
-let handle_msg = function Muted -> "MUTED" | Unmuted -> "UNMUTED"
+let mic_state_to_string = function Muted -> "MUTED" | Unmuted -> "UNMUTED"
+let run_cmd cmd = match Sys.command cmd with 0 -> true | _ -> false
 
-let mutemic_linux mute_flag =
+let mutemic_linux mic_state =
   let os = "Linux" in
-  let mutemsg = if mute_flag then Muted else Unmuted in
+  let cmd, output =
+    match mic_state with
+    | Muted -> ("amixer set Capture nocap", "mic successfully muted")
+    | Unmuted -> ("amixer set Capture cap", "mic successfully unmuted")
+  in
+  if run_cmd cmd then
+    Printf.printf "[%s] %s (%s)\n" os output (mic_state_to_string mic_state)
+  else
+    Printf.printf "[%s] Failed to change mic state: %s\n" os
+      (mic_state_to_string mic_state)
 
+let mutemic_macos mic_state =
+  let os = "MacOS" in
   let cmd =
-    if mute_flag then "amixer set Capture nocap" else "amixer set Capture cap"
+    match mic_state with
+    | Muted -> "osascript -e 'set volume input muted true'"
+    | Unmuted -> "osascript -e 'set volume input muted false'"
   in
+  if run_cmd cmd then
+    Printf.printf "[%s] Mic successfully %s\n" os
+      (mic_state_to_string mic_state)
+  else
+    Printf.printf "[%s] Failed to change mic state: %s\n" os
+      (mic_state_to_string mic_state)
 
-  let status = Sys.command cmd in
+let mutemic mic_state =
+  match Sys.os_type with
+  | "Unix" -> mutemic_linux mic_state
+  | "MacOS" -> mutemic_macos mic_state
+  | os -> Printf.printf "Unsupported OS: %s\n" os
 
-  print_endline "";
-  if status = 0 then
-    Printf.printf "[%s] Mic successfully %s\n" os (handle_msg mutemsg)
-  else Printf.printf "[%s] Mic failed to: %s\n" os (handle_msg mutemsg)
+let print_help () =
+  let help_text =
+    {|
+NAME
+    mutemic - mutes or unmutes the microphone.
 
-let mutemic_macos mute_flag = failwith "Not implemented."
+SYNOPSIS
+    mutemic [OPTION]
 
-let mute_microphone mute =
-  let os = Sys.os_type in
-  match os with
-  | "Unix" -> mutemic_linux mute
-  | "MacOS" -> mutemic_macos mute
-  | _ -> failwith "Unsupported OS: %s\n"
+DESCRIPTION
+    -u, --unmute
+        Unmute the microphone.
 
-let help_msg =
-  let msg =
-    "NAME\n" ^ "\tmutemic - mutes or unmutes mic\n" ^ "SYNOPSIS\n"
-    ^ "\t mutemic [OPTION]\n" ^ "DESCRIPTION\n" ^ "\t-u, --unmute\n"
-    ^ "\t\t unmutes the mic\n" ^ "\t-h, --help\n" ^ "\t\t prints this message\n"
-    ^ "\t--no-unmute\n"
-    ^ "\t\t unmutes the mic. Same as when running with no args.\n"
+    --no-unmute
+        Unmute the microphone. Same as running with no arguments.
+
+    -h, --help
+        Display this help message.
+|}
   in
-  print_endline msg
+  print_endline help_text
 
 let () =
-  if Array.length Sys.argv = 1 then mute_microphone true
+  if Array.length Sys.argv = 1 then mutemic Muted
   else
-    let arg = Sys.argv.(1) in
-    match arg with
-    | "" -> mute_microphone true
-    | "-h" -> help_msg
-    | "--help" -> help_msg
-    | "--no-unmute" -> mute_microphone true
-    | "-u" -> mute_microphone false
-    | "--unmute" -> mute_microphone false
-    | _ -> Printf.eprintf "Unexpected err. Arg: %s" arg
+    match Sys.argv.(1) with
+    | "" | "--no-unmute" -> mutemic Unmuted
+    | "-u" | "--unmute" -> mutemic Unmuted
+    | "-h" | "--help" -> print_help ()
+    | arg -> Printf.eprintf "Unexpected argument: %s\n" arg
