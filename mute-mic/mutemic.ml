@@ -35,8 +35,8 @@ let mutemic_macos mic_state =
   let os = "MacOS" in
   let cmd =
     match mic_state with
-    | Muted -> "osascript -e 'set volume input muted true'"
-    | Unmuted -> "osascript -e 'set volume input muted false'"
+    | Muted -> "osascript -e 'set volume input volume 0'"
+    | Unmuted -> "osascript -e 'set volume input volume 10'"
   in
   if run_cmd cmd then
     Printf.printf "[%s] Mic successfully %s\n" os
